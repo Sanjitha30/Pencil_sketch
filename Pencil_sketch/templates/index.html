@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencil Sketch Converter</title>
+    <style>
+        /* General styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #1f4037, #99f2c8);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 3em;
+            text-transform: uppercase;
+        }
+
+        /* Container for forms */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 40px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .container > * {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            color: #fff;
+        }
+
+        /* Form styles */
+        input[type="file"] {
+            margin-top: 10px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            background-color: #ff7e5f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #feb47b;
+            transform: scale(1.05);
+        }
+
+        /* Webcam and images */
+        video, img {
+            max-width: 100%;
+            border: 2px solid #fff;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .image-container div {
+            text-align: center;
+            margin: 10px;
+        }
+    </style>
+    <script>
+        // Start the webcam
+        function startWebcam() {
+            const video = document.getElementById('webcamVideo');
+            if (navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(() => {
+                    alert("Unable to access the webcam. Please allow webcam access.");
+                });
+            } else {
+                alert("Webcam not supported by your browser.");
+            }
+        }
+
+        // Capture an image from the webcam
+        function captureWebcamImage() {
+            const video = document.getElementById('webcamVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas content to a Blob and send it to the backend
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'webcam.jpg');
+
+                fetch('/capture', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    }
+                });
+            }, 'image/jpeg');
+        }
+    </script>
+</head>
+<body>
+    <h1>Pencil Sketch Converter</h1>
+
+    <!-- Upload and Webcam container -->
+    <div class="container">
+        <!-- Upload Form -->
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <h2>Upload an Image</h2>
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Upload and Convert</button>
+        </form>
+        
+
+        <!-- Webcam Controls -->
+        <div>
+            <h2>Use Your Webcam</h2>
+            <button onclick="startWebcam()">Start Webcam</button>
+            <button onclick="captureWebcamImage()">Capture Image</button>
+            <video id="webcamVideo" autoplay></video>
+        </div>
+    </div>
+
+    <!-- Display Original and Sketch Images -->
+    {% if uploaded_file and sketch_file %}
+    <div class="image-container">
+        <div>
+            <h2>Original Image</h2>
+            <img src="{{ url_for('uploaded_file', filename=uploaded_file) }}" alt="Uploaded Image">
+        </div>
+        <div>
+            <h2>Pencil Sketch</h2>
+            <img src="{{ url_for('processed_file', filename=sketch_file) }}" alt="Pencil Sketch">
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
